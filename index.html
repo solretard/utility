@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPREAD | The Real Meme</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --spread-blue: #1d2b7d; --spread-yellow: #ffec00; --bg-dark: #0a0a0a; }
+        body { 
+            background: var(--bg-dark); 
+            color: white; 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            text-align: center; 
+        }
+        
+        .header { padding: 40px; }
+        .jar-logo { width: 200px; filter: drop-shadow(0 0 20px var(--spread-blue)); transition: 0.5s; }
+        .jar-logo:hover { transform: rotate(10deg) scale(1.1); }
+
+        .dashboard { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; }
+        
+        .feed-container { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--spread-blue); 
+                          border-radius: 20px; width: 450px; height: 600px; overflow-y: auto; padding: 10px; }
+
+        .submission-card { background: var(--spread-blue); border-radius: 20px; padding: 30px; width: 350px; height: 560px;
+                           display: flex; flex-direction: column; justify-content: space-around; }
+
+        .leaderboard-card { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--spread-yellow); 
+                            border-radius: 20px; width: 840px; margin: 20px auto; padding: 20px; }
+
+        .btn { background: var(--spread-yellow); color: black; border: none; padding: 15px; 
+               font-weight: bold; border-radius: 10px; cursor: pointer; text-transform: uppercase; width: 100%; }
+        
+        .input-field { background: white; color: black; border: none; padding: 15px; 
+                       border-radius: 10px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { color: var(--spread-yellow); border-bottom: 1px solid var(--spread-yellow); padding: 10px; }
+        td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="spread.png" class="jar-logo" alt="Spread Mayo">
+        <h1>SPREAD THE MEME AND EARN $SPREAD</h1>
+        <p>Prevent Fud.</p>
+    </div>
+
+    <div class="dashboard">
+        <div class="feed-container">
+            <h3 style="color: var(--spread-yellow)">LIVE BROADCAST</h3>
+            <a class="twitter-timeline" data-height="500" data-theme="dark" href="https://twitter.com/Spread0N?ref_src=twsrc%5Etfw">@Spread0N</a> 
+            <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+        </div>
+
+        <div class="submission-card">
+            <h3>Have you Spread the meme?</h3>
+            <p>1. Open the latest tweet.<br>2. Like, Repost, and Reply.<br>3. Upload proof below.</p>
+            
+            <input type="text" placeholder="X Username (@...)" id="xname" class="input-field">
+            <input type="text" placeholder="XRPL Wallet Address" id="wallet" class="input-field">
+            
+            <div style="border: 2px dashed var(--spread-yellow); padding: 10px; margin: 10px 0;">
+                <p style="font-size: 0.8rem;">Proof Screenshot</p>
+                <input type="file" id="proof" accept="image/*" style="font-size: 0.7rem;">
+            </div>
+
+            <button class="btn" onclick="submitSpread()">Submit for Airdrop</button>
+        </div>
+    </div>
+
+    <div class="leaderboard-card">
+        <h3 style="color: var(--spread-yellow)"> TOP SPREADERS</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>RANK</th>
+                    <th>(WALLET)</th>
+                    <th>X HANDLE</th>
+                    <th>$SPREAD</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+                <tr><td colspan="4">CONNECTING TO BASE...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://vxffrsfrsamfahffudln.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_3DrNyx7KypOaYhlLn080uQ_wuMqYAr6';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function fetchLeaderboard() {
+            const { data, error } = await _supabase
+                .from('leaderboard')
+                .select('*')
+                .order('spread_score', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching:', error);
+                return;
+            }
+
+            let html = "";
+            data.forEach((user, index) => {
+                const shortWallet = user.wallet_address.substring(0,6) + "..." + user.wallet_address.slice(-4);
+                html += `<tr>
+                    <td>#${index + 1}</td>
+                    <td>${shortWallet}</td>
+                    <td>${user.x_handle}</td>
+                    <td style="color: var(--spread-yellow); font-weight: bold;">${user.spread_score}</td>
+                </tr>`;
+            });
+            document.getElementById('leaderboard-body').innerHTML = html || "<tr><td colspan='4'>NO SIGNALS DETECTED.</td></tr>";
+        }
+
+        async function submitSpread() {
+            const wallet = document.getElementById('wallet').value;
+            const xname = document.getElementById('xname').value;
+            const fileInput = document.getElementById('proof');
+            const file = fileInput.files[0];
+
+            if(!wallet || !xname || !file) {
+                return alert("Identification and Proof required, soldier.");
+            }
+
+            // 1. Upload the Screenshot to Supabase Storage
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${wallet}-${Date.now()}.${fileExt}`;
+            
+            const { data: uploadData, error: uploadError } = await _supabase
+                .storage
+                .from('proofs')
+                .upload(fileName, file);
+
+            if (uploadError) {
+                return alert("Upload Failed: " + uploadError.message);
+            }
+
+            // 2. Register the wallet in the leaderboard table
+            const { error: dbError } = await _supabase
+                .from('leaderboard')
+                .upsert({ 
+                    wallet_address: wallet, 
+                    x_handle: xname,
+                    spread_score: 0 // Starts at 0 until you manually verify
+                });
+
+            if (dbError) {
+                alert("Database Error: " + dbError.message);
+            } else {
+                alert("TRANSMISSION RECEIVED. Your proof is being reviewed at base.");
+                fetchLeaderboard();
+            }
+        }
+
+        fetchLeaderboard();
+    </script>
+</body>
+</html>
