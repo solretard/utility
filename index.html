@@ -5,176 +5,752 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SPREAD | The Real Meme</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --spread-blue: #1d2b7d; --spread-yellow: #ffec00; --bg-dark: #0a0a0a; }
-        body { 
-            background: var(--bg-dark); 
-            color: white; 
-            font-family: 'Inter', sans-serif; 
-            margin: 0; 
-            text-align: center; 
+        :root {
+            --spread-blue: #1d2b7d;
+            --spread-yellow: #ffec00;
+            --bg-dark: #0a0a0a;
         }
-        
-        .header { padding: 40px; }
-        .jar-logo { width: 200px; filter: drop-shadow(0 0 20px var(--spread-blue)); transition: 0.5s; }
-        .jar-logo:hover { transform: rotate(10deg) scale(1.1); }
 
-        .dashboard { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; }
-        
-        .feed-container { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--spread-blue); 
-                          border-radius: 20px; width: 450px; height: 600px; overflow-y: auto; padding: 10px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        .submission-card { background: var(--spread-blue); border-radius: 20px; padding: 30px; width: 350px; height: 560px;
-                           display: flex; flex-direction: column; justify-content: space-around; }
+        body {
+            background: var(--bg-dark);
+            color: white;
+            font-family: 'Barlow Condensed', sans-serif;
+            text-align: center;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
 
-        .leaderboard-card { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--spread-yellow); 
-                            border-radius: 20px; width: 840px; margin: 20px auto; padding: 20px; }
+        /* ── MAYO RAIN CANVAS ── */
+        #mayo-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
 
-        .btn { background: var(--spread-yellow); color: black; border: none; padding: 15px; 
-               font-weight: bold; border-radius: 10px; cursor: pointer; text-transform: uppercase; width: 100%; }
-        
-        .btn:disabled { background: #555; cursor: not-allowed; }
+        /* ── PRICE TICKER ── */
+        #price-ticker {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--spread-blue);
+            border-bottom: 2px solid var(--spread-yellow);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+            font-family: 'Black Ops One', cursive;
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
 
-        .input-field { background: white; color: black; border: none; padding: 15px; 
-                       border-radius: 10px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { color: var(--spread-yellow); border-bottom: 1px solid var(--spread-yellow); padding: 10px; }
-        td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .ticker-item { display: flex; align-items: center; gap: 8px; }
+        .ticker-label { color: rgba(255,255,255,0.5); font-size: 11px; font-family: 'Barlow Condensed', sans-serif; }
+        .ticker-value { color: var(--spread-yellow); }
+        .ticker-change.up { color: #00ff88; }
+        .ticker-change.down { color: #ff4444; }
+        .ticker-dot { width: 6px; height: 6px; background: #00ff88; border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.4)} }
+
+        /* ── MAIN CONTENT ── */
+        .content { position: relative; z-index: 1; }
+
+        /* ── HEADER ── */
+        .header {
+            padding: 50px 20px 30px;
+            position: relative;
+        }
+
+        .jar-logo {
+            width: 180px;
+            filter: drop-shadow(0 0 30px rgba(29,43,125,0.8));
+            transition: 0.4s cubic-bezier(0.34,1.56,0.64,1);
+            animation: float 3s ease-in-out infinite;
+        }
+        .jar-logo:hover { transform: rotate(15deg) scale(1.15); }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+
+        h1 {
+            font-family: 'Black Ops One', cursive;
+            font-size: clamp(24px, 5vw, 52px);
+            margin: 20px 0 8px;
+            letter-spacing: 2px;
+            line-height: 1.1;
+        }
+
+        h1 span { color: var(--spread-yellow); }
+        .tagline { color: rgba(255,255,255,0.5); font-size: 16px; letter-spacing: 4px; text-transform: uppercase; }
+
+        /* ── HOLDER VERIFICATION ── */
+        .verify-section {
+            max-width: 600px;
+            margin: 20px auto;
+            background: rgba(255,236,0,0.05);
+            border: 1px solid var(--spread-yellow);
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .verify-section h3 {
+            font-family: 'Black Ops One', cursive;
+            color: var(--spread-yellow);
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .verify-input-row { display: flex; gap: 10px; margin-bottom: 12px; }
+        .verify-input {
+            flex: 1;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 15px;
+        }
+        .verify-input:focus { outline: none; border-color: var(--spread-yellow); }
+        .verify-btn {
+            background: var(--spread-yellow);
+            color: black;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-family: 'Black Ops One', cursive;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            white-space: nowrap;
+        }
+        .verify-btn:hover { transform: scale(1.03); }
+        .verify-btn:active { transform: scale(0.97); }
+
+        #verify-result {
+            font-size: 15px;
+            min-height: 24px;
+            transition: all 0.3s;
+        }
+
+        .holder-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0,255,136,0.12);
+            border: 1px solid #00ff88;
+            border-radius: 30px;
+            padding: 8px 20px;
+            color: #00ff88;
+            font-family: 'Black Ops One', cursive;
+            font-size: 14px;
+            animation: badgePop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes badgePop { 0%{transform:scale(0);opacity:0} 100%{transform:scale(1);opacity:1} }
+
+        .not-holder {
+            color: #ff6b6b;
+            font-size: 15px;
+        }
+
+        /* ── DASHBOARD ── */
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .feed-container {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--spread-blue);
+            border-radius: 20px;
+            width: 420px;
+            height: 580px;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .card-title {
+            font-family: 'Black Ops One', cursive;
+            color: var(--spread-yellow);
+            font-size: 16px;
+            letter-spacing: 2px;
+            margin-bottom: 14px;
+        }
+
+        .submission-card {
+            background: var(--spread-blue);
+            border-radius: 20px;
+            padding: 28px;
+            width: 340px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .submission-card h3 {
+            font-family: 'Black Ops One', cursive;
+            font-size: 18px;
+            color: var(--spread-yellow);
+        }
+
+        .submission-card p { font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.6; }
+
+        .btn {
+            background: var(--spread-yellow);
+            color: black;
+            border: none;
+            padding: 14px;
+            font-family: 'Black Ops One', cursive;
+            font-size: 14px;
+            letter-spacing: 1px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.1s;
+            width: 100%;
+        }
+        .btn:hover { transform: scale(1.02); }
+        .btn:disabled { background: #555; cursor: not-allowed; transform: none; }
+
+        .input-field {
+            background: rgba(255,255,255,0.9);
+            color: black;
+            border: none;
+            padding: 13px 16px;
+            border-radius: 10px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 15px;
+            width: 100%;
+        }
+
+        .proof-zone {
+            border: 2px dashed var(--spread-yellow);
+            border-radius: 10px;
+            padding: 16px;
+            font-size: 13px;
+            color: rgba(255,255,255,0.6);
+        }
+
+        /* ── LIVE TX FEED ── */
+        .tx-feed {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(0,255,136,0.3);
+            border-radius: 20px;
+            width: 420px;
+            height: 580px;
+            overflow: hidden;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #tx-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+
+        .tx-item {
+            background: rgba(0,255,136,0.05);
+            border: 1px solid rgba(0,255,136,0.15);
+            border-radius: 10px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            animation: txSlide 0.4s ease;
+        }
+        @keyframes txSlide { from{transform:translateX(-20px);opacity:0} to{transform:translateX(0);opacity:1} }
+
+        .tx-wallet { color: rgba(255,255,255,0.5); font-family: monospace; font-size: 11px; }
+        .tx-amount { color: #00ff88; font-family: 'Black Ops One', cursive; font-size: 14px; }
+        .tx-time { color: rgba(255,255,255,0.3); font-size: 11px; }
+        .tx-type-buy { color: #00ff88; font-size: 10px; background: rgba(0,255,136,0.1); padding: 2px 8px; border-radius: 20px; }
+        .tx-type-sell { color: #ff6b6b; font-size: 10px; background: rgba(255,107,107,0.1); padding: 2px 8px; border-radius: 20px; }
+
+        .tx-placeholder { color: rgba(255,255,255,0.25); font-size: 13px; margin: auto; }
+
+        /* ── LEADERBOARD ── */
+        .leaderboard-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--spread-yellow);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 880px;
+            margin: 0 auto 40px;
+            padding: 24px;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th {
+            font-family: 'Black Ops One', cursive;
+            color: var(--spread-yellow);
+            border-bottom: 1px solid rgba(255,236,0,0.3);
+            padding: 10px;
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
+        td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 15px; }
+        tr:hover td { background: rgba(255,255,255,0.03); }
+
+        .rank-1 { color: #ffd700; font-family: 'Black Ops One', cursive; }
+        .rank-2 { color: #c0c0c0; font-family: 'Black Ops One', cursive; }
+        .rank-3 { color: #cd7f32; font-family: 'Black Ops One', cursive; }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--spread-blue); border-radius: 4px; }
     </style>
 </head>
 <body>
 
+<!-- MAYO RAIN -->
+<canvas id="mayo-canvas"></canvas>
+
+<!-- LIVE PRICE TICKER -->
+<div id="price-ticker">
+    <div class="ticker-item">
+        <div class="ticker-dot"></div>
+        <span class="ticker-label">$SPREAD</span>
+        <span class="ticker-value" id="t-price">LOADING...</span>
+        <span class="ticker-change" id="t-change"></span>
+    </div>
+    <div class="ticker-item">
+        <span class="ticker-label">USD</span>
+        <span class="ticker-value" id="t-usd">--</span>
+    </div>
+    <div class="ticker-item">
+        <span class="ticker-label">MKT CAP</span>
+        <span class="ticker-value" id="t-mcap">--</span>
+    </div>
+    <div class="ticker-item">
+        <span class="ticker-label">HOLDERS</span>
+        <span class="ticker-value" id="t-holders">--</span>
+    </div>
+    <div class="ticker-item">
+        <span class="ticker-label">24H VOL</span>
+        <span class="ticker-value" id="t-vol">--</span>
+    </div>
+</div>
+
+<div class="content">
+
+    <!-- HEADER -->
     <div class="header">
         <img src="spread.png" class="jar-logo" alt="Spread Mayo">
-        <h1>SPREAD THE MEME AND EARN <span style="color: blue;" >$SPREAD</span></h1>
-        <p>Prevent Fud.</p>
+        <h1>SPREAD THE MEME<br>AND EARN <span>$SPREAD</span></h1>
+        <p class="tagline">Prevent FUD. Stay Spreading.</p>
     </div>
 
+    <!-- HOLDER VERIFICATION -->
+    <div class="verify-section" style="max-width:600px;margin:0 auto 30px;">
+        <h3>VERIFY HOLDER STATUS</h3>
+        <p style="color:rgba(255,255,255,0.5);font-size:14px;margin-bottom:16px;">Enter your XRPL wallet to check if you hold $SPREAD and get your badge</p>
+        <div class="verify-input-row">
+            <input type="text" class="verify-input" id="verify-wallet" placeholder="Your XRPL wallet address (r...)">
+            <button class="verify-btn" onclick="verifyHolder()">VERIFY</button>
+        </div>
+        <div id="verify-result"></div>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
     <div class="dashboard">
+
+        <!-- TWITTER FEED -->
         <div class="feed-container">
-            <h3 style="color: var(--spread-yellow)">LIVE BROADCAST</h3>
-            <a class="twitter-timeline" data-height="500" data-theme="dark" href="https://twitter.com/Spread0N?ref_src=twsrc%5Etfw">@Spread0N</a> 
+            <div class="card-title">LIVE BROADCAST</div>
+            <a class="twitter-timeline" data-height="500" data-theme="dark" href="https://twitter.com/Spread0N?ref_src=twsrc%5Etfw">@Spread0N</a>
             <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
         </div>
 
+        <!-- SUBMISSION CARD -->
         <div class="submission-card">
-            <h3>Have you Spread the meme?</h3>
-            <p>1. Open the latest tweet.<br>2. Like, Repost, and Reply.<br>3. Upload proof below.</p>
-            
+            <h3>SPREAD THE MEME</h3>
+            <p>1. Open the latest tweet.<br>2. Like, Repost & Reply.<br>3. Upload proof below.</p>
             <input type="text" placeholder="X Username (@...)" id="xname" class="input-field">
             <input type="text" placeholder="XRPL Wallet Address" id="wallet" class="input-field">
-            
-            <div style="border: 2px dashed var(--spread-yellow); padding: 10px; margin: 10px 0;">
-                <p style="font-size: 0.8rem;">Proof Screenshot</p>
-                <input type="file" id="proof" accept="image/*" style="font-size: 0.7rem;">
+            <div class="proof-zone">
+                <p style="font-size:12px;margin-bottom:8px;">Proof Screenshot</p>
+                <input type="file" id="proof" accept="image/*" style="font-size:12px;color:white;">
             </div>
-
-            <button class="btn" id="submit-btn" onclick="submitSpread()">Submit for Airdrop</button>
+            <button class="btn" id="submit-btn" onclick="submitSpread()">SUBMIT FOR AIRDROP</button>
         </div>
+
+        <!-- LIVE TX FEED -->
+        <div class="tx-feed">
+            <div class="card-title">LIVE TRANSACTIONS</div>
+            <div id="tx-list">
+                <div class="tx-placeholder">Connecting to XRPL...</div>
+            </div>
+        </div>
+
     </div>
 
-    <div class="leaderboard-card">
-        <h3 style="color: var(--spread-yellow)"> TOP SPREADERS</h3>
+    <!-- LEADERBOARD -->
+    <div class="leaderboard-card" style="margin:0 20px 40px;">
+        <div class="card-title">TOP SPREADERS</div>
         <table>
             <thead>
                 <tr>
                     <th>RANK</th>
-                    <th>(WALLET)</th>
+                    <th>WALLET</th>
                     <th>X HANDLE</th>
                     <th>$SPREAD</th>
                 </tr>
             </thead>
             <tbody id="leaderboard-body">
-                <tr><td colspan="4">CONNECTING TO BASE...</td></tr>
+                <tr><td colspan="5" style="color:rgba(255,255,255,0.3)">CONNECTING TO BASE...</td></tr>
             </tbody>
         </table>
     </div>
 
-    <script>
-        const SUPABASE_URL = 'https://vxffrsfrsamfahffudln.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_3DrNyx7KypOaYhlLn080uQ_wuMqYAr6';
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+</div>
 
-        async function fetchLeaderboard() {
-            const { data, error } = await _supabase
-                .from('leaderboard')
-                .select('*')
-                .order('spread_score', { ascending: false });
+<script>
+// ── SUPABASE ──────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://vxffrsfrsamfahffudln.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_3DrNyx7KypOaYhlLn080uQ_wuMqYAr6';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-            if (error) {
-                console.error('Error fetching:', error);
-                return;
-            }
+// ── TOKEN CONFIG (update after launch) ───────────────────────────────────────
+const SPREAD_ISSUER = 'YOUR_ISSUER_ADDRESS_HERE';
+const SPREAD_CURRENCY = 'SPREAD';
+const TOTAL_SUPPLY = 1_000_000_000;
 
-            let html = "";
-            data.forEach((user, index) => {
-                const shortWallet = user.wallet_address.substring(0,6) + "..." + user.wallet_address.slice(-4);
-                html += `<tr>
-                    <td>#${index + 1}</td>
-                    <td>${shortWallet}</td>
-                    <td>${user.x_handle}</td>
-                    <td style="color: var(--spread-yellow); font-weight: bold;">${user.spread_score}</td>
-                </tr>`;
-            });
-            document.getElementById('leaderboard-body').innerHTML = html || "<tr><td colspan='4'>NO SIGNALS DETECTED.</td></tr>";
+// ── MAYO RAIN ─────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('mayo-canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+
+const jars = [];
+const JAR_COUNT = 18;
+
+for (let i = 0; i < JAR_COUNT; i++) {
+    jars.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight * -1,
+        size: Math.random() * 28 + 14,
+        speed: Math.random() * 1.2 + 0.4,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.03,
+        opacity: Math.random() * 0.18 + 0.06,
+        wobble: Math.random() * Math.PI * 2,
+    });
+}
+
+function drawJar(jar) {
+    const { x, y, size, rotation, opacity } = jar;
+    const w = size, h = size * 1.3;
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+
+    // jar body
+    ctx.fillStyle = '#f0f0e0';
+    ctx.beginPath();
+    ctx.roundRect(-w/2, -h/2, w, h, 4);
+    ctx.fill();
+
+    // blue label
+    ctx.fillStyle = '#1d2b7d';
+    ctx.beginPath();
+    ctx.roundRect(-w/2, -h/2, w, h*0.45, [4,4,0,0]);
+    ctx.fill();
+
+    // yellow stripe
+    ctx.fillStyle = '#ffec00';
+    ctx.fillRect(-w/2, h*0.05, w, h*0.13);
+
+    // white text on label
+    ctx.fillStyle = 'white';
+    ctx.font = `bold ${size*0.22}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('SPREAD', 0, -h*0.2);
+
+    ctx.restore();
+}
+
+function animateMayo() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const jar of jars) {
+        jar.y += jar.speed;
+        jar.rotation += jar.rotSpeed;
+        jar.wobble += 0.02;
+        jar.x += Math.sin(jar.wobble) * 0.4;
+        if (jar.y > canvas.height + 60) {
+            jar.y = -60;
+            jar.x = Math.random() * canvas.width;
+        }
+        drawJar(jar);
+    }
+    requestAnimationFrame(animateMayo);
+}
+animateMayo();
+
+// ── LIVE PRICE TICKER ─────────────────────────────────────────────────────────
+let xrpUsdPrice = 0;
+
+async function fetchXRPPrice() {
+    try {
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd');
+        const data = await res.json();
+        xrpUsdPrice = data?.ripple?.usd || 0;
+    } catch { xrpUsdPrice = 0.5; }
+}
+
+async function fetchSpreadPrice() {
+    try {
+        await fetchXRPPrice();
+
+        if (SPREAD_ISSUER === 'YOUR_ISSUER_ADDRESS_HERE') {
+            // Pre-launch placeholder
+            document.getElementById('t-price').textContent = 'PRE-LAUNCH';
+            document.getElementById('t-usd').textContent = '--';
+            document.getElementById('t-mcap').textContent = '--';
+            document.getElementById('t-vol').textContent = '--';
+            document.getElementById('t-holders').textContent = '--';
+            return;
         }
 
-        async function submitSpread() {
-            const wallet = document.getElementById('wallet').value;
-            const xname = document.getElementById('xname').value;
-            const fileInput = document.getElementById('proof');
-            const file = fileInput.files[0];
-            const submitBtn = document.getElementById('submit-btn');
+        const res = await fetch(`https://api.xrpscan.com/api/v1/token/${SPREAD_CURRENCY}+${SPREAD_ISSUER}`);
+        const data = await res.json();
 
-            if(!wallet || !xname || !file) {
-                return alert("Identification and Proof required, soldier.");
-            }
+        const price = parseFloat(data?.price || 0);
+        const priceUsd = price * xrpUsdPrice;
+        const mcap = price * TOTAL_SUPPLY;
+        const mcapUsd = mcap * xrpUsdPrice;
+        const change = parseFloat(data?.price_change_24h || 0);
+        const vol = parseFloat(data?.volume_24h || 0);
+        const holders = data?.holders || '--';
 
-            // Disable button and show loading status
-            submitBtn.disabled = true;
-            submitBtn.innerText = "UPLOADING...";
+        document.getElementById('t-price').textContent = price > 0 ? price.toFixed(8) + ' XRP' : '--';
+        document.getElementById('t-usd').textContent = priceUsd > 0 ? '$' + priceUsd.toFixed(6) : '--';
+        document.getElementById('t-mcap').textContent = mcapUsd > 0 ? '$' + formatNum(mcapUsd) : '--';
+        document.getElementById('t-vol').textContent = vol > 0 ? formatNum(vol) + ' XRP' : '--';
+        document.getElementById('t-holders').textContent = holders;
 
-            // 1. Upload the Screenshot to Supabase Storage
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${wallet}-${Date.now()}.${fileExt}`;
-            
-            const { data: uploadData, error: uploadError } = await _supabase
-                .storage
-                .from('proofs')
-                .upload(fileName, file);
-
-            if (uploadError) {
-                submitBtn.disabled = false;
-                submitBtn.innerText = "SUBMIT FOR AIRDROP";
-                return alert("Upload Failed: " + uploadError.message);
-            }
-
-            // 2. Register/Update the wallet (UPSERT)
-            const { error: dbError } = await _supabase
-                .from('leaderboard')
-                .upsert(
-                    { 
-                        wallet_address: wallet, 
-                        x_handle: xname
-                        // Removed spread_score: 0 so it doesn't reset existing scores
-                    }, 
-                    { onConflict: 'wallet_address' }
-                );
-
-            if (dbError) {
-                alert("Database Error: " + dbError.message);
-                submitBtn.disabled = false;
-                submitBtn.innerText = "SUBMIT FOR AIRDROP";
-            } else {
-                alert("TRANSMISSION RECEIVED. Your proof is being reviewed at base.");
-                submitBtn.disabled = false;
-                submitBtn.innerText = "SUBMIT FOR AIRDROP";
-                fetchLeaderboard();
-            }
+        const changeEl = document.getElementById('t-change');
+        if (change !== 0) {
+            changeEl.textContent = (change > 0 ? '+' : '') + change.toFixed(2) + '%';
+            changeEl.className = 'ticker-change ' + (change >= 0 ? 'up' : 'down');
         }
+    } catch (err) {
+        console.error('Price fetch error:', err);
+    }
+}
 
+function formatNum(n) {
+    if (n >= 1_000_000) return (n/1_000_000).toFixed(2) + 'M';
+    if (n >= 1_000) return (n/1_000).toFixed(1) + 'K';
+    return n.toFixed(2);
+}
+
+fetchSpreadPrice();
+setInterval(fetchSpreadPrice, 30000);
+
+// ── LIVE TRANSACTION FEED ─────────────────────────────────────────────────────
+let txClient = null;
+const txList = document.getElementById('tx-list');
+const MAX_TX = 20;
+
+function addTx(wallet, amount, type, time) {
+    const placeholder = txList.querySelector('.tx-placeholder');
+    if (placeholder) placeholder.remove();
+
+    const short = wallet.substring(0,6) + '...' + wallet.slice(-4);
+    const timeStr = new Date(time).toLocaleTimeString();
+    const div = document.createElement('div');
+    div.className = 'tx-item';
+    div.innerHTML = `
+        <div>
+            <span class="tx-type-${type}">${type.toUpperCase()}</span>
+            <div class="tx-wallet">${short}</div>
+        </div>
+        <div class="tx-amount">${parseFloat(amount).toFixed(2)} XRP</div>
+        <div class="tx-time">${timeStr}</div>
+    `;
+    txList.prepend(div);
+
+    // Keep max 20 transactions
+    while (txList.children.length > MAX_TX) {
+        txList.removeChild(txList.lastChild);
+    }
+}
+
+async function connectTxFeed() {
+    if (SPREAD_ISSUER === 'YOUR_ISSUER_ADDRESS_HERE') {
+        txList.innerHTML = '<div class="tx-placeholder">Transactions will appear after launch</div>';
+        return;
+    }
+
+    try {
+        const xrpl = await import('https://esm.sh/xrpl@3');
+        txClient = new xrpl.Client('wss://xrplcluster.com');
+        await txClient.connect();
+
+        await txClient.request({
+            command: 'subscribe',
+            accounts: [SPREAD_ISSUER],
+        });
+
+        txClient.on('transaction', (data) => {
+            const tx = data?.transaction;
+            if (!tx) return;
+
+            if (tx.TransactionType === 'OfferCreate') {
+                const tg = tx.TakerGets;
+                const tp = tx.TakerPays;
+
+                if (typeof tg === 'object' && tg.currency === SPREAD_CURRENCY) {
+                    addTx(tx.Account, typeof tp === 'string' ? parseInt(tp)/1000000 : 0, 'buy', Date.now());
+                } else if (typeof tp === 'object' && tp.currency === SPREAD_CURRENCY) {
+                    addTx(tx.Account, typeof tg === 'string' ? parseInt(tg)/1000000 : 0, 'sell', Date.now());
+                }
+            }
+        });
+
+        txClient.on('disconnected', () => {
+            setTimeout(connectTxFeed, 5000);
+        });
+
+    } catch (err) {
+        console.error('TX feed error:', err);
+        txList.innerHTML = '<div class="tx-placeholder">Could not connect to XRPL</div>';
+    }
+}
+
+connectTxFeed();
+
+// ── HOLDER VERIFICATION ───────────────────────────────────────────────────────
+async function verifyHolder() {
+    const wallet = document.getElementById('verify-wallet').value.trim();
+    const resultEl = document.getElementById('verify-result');
+
+    if (!wallet.startsWith('r') || wallet.length < 25) {
+        resultEl.innerHTML = '<span class="not-holder">❌ Invalid XRPL address</span>';
+        return;
+    }
+
+    resultEl.innerHTML = '<span style="color:rgba(255,255,255,0.4)">Checking...</span>';
+
+    if (SPREAD_ISSUER === 'YOUR_ISSUER_ADDRESS_HERE') {
+        resultEl.innerHTML = '<span style="color:rgba(255,255,255,0.4)">Holder verification available after launch</span>';
+        return;
+    }
+
+    try {
+        const res = await fetch(`https://api.xrpscan.com/api/v1/account/${wallet}/trustlines`);
+        const data = await res.json();
+        const lines = data?.trustlines || [];
+        const holds = lines.find(l => l.currency === SPREAD_CURRENCY && l.account === SPREAD_ISSUER);
+
+        if (holds && parseFloat(holds.balance) > 0) {
+            const bal = parseFloat(holds.balance);
+            resultEl.innerHTML = `
+                <div class="holder-badge">
+                    ✅ VERIFIED HOLDER — ${formatNum(bal)} $SPREAD
+                </div>
+            `;
+            // Update leaderboard badge
+            updateHolderBadge(wallet);
+        } else {
+            resultEl.innerHTML = `
+                <span class="not-holder">❌ No $SPREAD found in this wallet — <a href="https://firstledger.net" target="_blank" style="color:var(--spread-yellow)">Buy on FirstLedger</a></span>
+            `;
+        }
+    } catch (err) {
+        resultEl.innerHTML = '<span class="not-holder">Could not verify — try again</span>';
+    }
+}
+
+function updateHolderBadge(wallet) {
+    const rows = document.querySelectorAll('#leaderboard-body tr');
+    rows.forEach(row => {
+        const walletCell = row.cells[1];
+        if (walletCell && wallet.includes(walletCell.textContent.replace('...', ''))) {
+            const statusCell = row.cells[4];
+            if (statusCell) statusCell.innerHTML = '<span style="color:#00ff88;font-size:12px">✅ VERIFIED</span>';
+        }
+    });
+}
+
+// ── LEADERBOARD ───────────────────────────────────────────────────────────────
+async function fetchLeaderboard() {
+    const { data, error } = await _supabase
+        .from('leaderboard')
+        .select('*')
+        .order('spread_score', { ascending: false });
+
+    if (error) { console.error('Leaderboard error:', error); return; }
+
+    const rankClass = ['rank-1','rank-2','rank-3'];
+    let html = '';
+    data.forEach((user, i) => {
+        const short = user.wallet_address.substring(0,6) + '...' + user.wallet_address.slice(-4);
+        const rank = i < 3 ? `<span class="${rankClass[i]}">#${i+1}</span>` : `#${i+1}`;
+        html += `<tr>
+            <td>${rank}</td>
+            <td style="font-family:monospace;font-size:13px">${short}</td>
+            <td>${user.x_handle}</td>
+            <td style="color:var(--spread-yellow);font-family:'Black Ops One',cursive">${user.spread_score}</td>
+            <td id="status-${user.wallet_address.slice(-6)}">—</td>
+        </tr>`;
+    });
+
+    document.getElementById('leaderboard-body').innerHTML =
+        html || '<tr><td colspan="5" style="color:rgba(255,255,255,0.3)">NO SIGNALS DETECTED.</td></tr>';
+}
+
+// ── SUBMIT AIRDROP ────────────────────────────────────────────────────────────
+async function submitSpread() {
+    const wallet = document.getElementById('wallet').value;
+    const xname = document.getElementById('xname').value;
+    const file = document.getElementById('proof').files[0];
+    const btn = document.getElementById('submit-btn');
+
+    if (!wallet || !xname || !file) return alert('Identification and Proof required, soldier.');
+
+    btn.disabled = true;
+    btn.textContent = 'UPLOADING...';
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${wallet}-${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await _supabase.storage.from('proofs').upload(fileName, file);
+    if (uploadError) {
+        btn.disabled = false;
+        btn.textContent = 'SUBMIT FOR AIRDROP';
+        return alert('Upload Failed: ' + uploadError.message);
+    }
+
+    const { error: dbError } = await _supabase.from('leaderboard').upsert(
+        { wallet_address: wallet, x_handle: xname },
+        { onConflict: 'wallet_address' }
+    );
+
+    if (dbError) {
+        alert('Database Error: ' + dbError.message);
+    } else {
+        alert('TRANSMISSION RECEIVED. Your proof is being reviewed at base.');
         fetchLeaderboard();
-    </script>
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'SUBMIT FOR AIRDROP';
+}
+
+fetchLeaderboard();
+</script>
 </body>
 </html>
